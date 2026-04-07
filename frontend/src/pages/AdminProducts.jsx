@@ -83,57 +83,96 @@ const AdminProducts = () => {
   };
 
   return (
-    <section className="page-section">
-      <div className="section-header">
-        <div>
-          <p className="eyebrow">Admin</p>
-          <h1>Manage Products</h1>
+    <section className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-cyan-50 px-6 py-10">
+      <div className="mx-auto max-w-7xl">
+        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-600">
+              Admin
+            </p>
+            <h1 className="mt-2 text-4xl font-extrabold tracking-tight text-slate-900">
+              Manage Products
+            </h1>
+            <p className="mt-2 text-sm text-slate-600">
+              Create, edit, and delete products with full catalog control.
+            </p>
+          </div>
+
+          <button
+            className="rounded-2xl bg-gradient-to-r from-sky-500 to-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-md transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+            type="button"
+            onClick={createProductHandler}
+            disabled={submitting}
+          >
+            {submitting ? "Creating..." : "Create Product"}
+          </button>
         </div>
 
-        <button
-          className="button"
-          type="button"
-          onClick={createProductHandler}
-          disabled={submitting}
-        >
-          {submitting ? "Creating..." : "Create Product"}
-        </button>
+        {error && (
+          <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
+            {error}
+          </div>
+        )}
+
+        {loading ? (
+          <Loader message="Loading admin products..." />
+        ) : (
+          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+            {products.map((product) => (
+              <div
+                key={product._id}
+                className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl"
+              >
+                <div className="h-56 w-full overflow-hidden bg-slate-100">
+                  <img
+                    src={product.image}
+                    alt={product.name}
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+
+                <div className="space-y-4 p-5">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-widest text-sky-600">
+                      {product.category || "General"}
+                    </p>
+                    <h2 className="mt-1 text-xl font-bold text-slate-900">
+                      {product.name}
+                    </h2>
+                    <p className="mt-2 text-lg font-extrabold text-slate-800">
+                      {formatCurrency(product.price)}
+                    </p>
+                  </div>
+
+                  <div className="space-y-1 text-sm text-slate-500">
+                    <p>Brand: {product.brand || "N/A"}</p>
+                    <p>Stock: {product.countInStock}</p>
+                    <p className="break-all">ID: {product._id}</p>
+                  </div>
+
+                  <div className="flex gap-3">
+                    <button
+                      className="flex-1 rounded-2xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                      type="button"
+                      onClick={() => navigate(`/admin/product/${product._id}/edit`)}
+                    >
+                      Edit
+                    </button>
+
+                    <button
+                      className="flex-1 rounded-2xl border border-red-200 px-4 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-50"
+                      type="button"
+                      onClick={() => deleteHandler(product._id)}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
-
-      {error && <div className="message message--error">{error}</div>}
-
-      {loading ? (
-        <Loader message="Loading admin products..." />
-      ) : (
-        <div className="stack">
-          {products.map((product) => (
-            <div key={product._id} className="order-row">
-              <div>
-                <p>{product.name}</p>
-                <p className="muted">{formatCurrency(product.price)}</p>
-              </div>
-
-              <div className="inline-actions">
-                <button
-                  className="button button--ghost"
-                  type="button"
-                  onClick={() => navigate(`/admin/product/${product._id}/edit`)}
-                >
-                  Edit
-                </button>
-
-                <button
-                  className="button button--ghost"
-                  type="button"
-                  onClick={() => deleteHandler(product._id)}
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
     </section>
   );
 };

@@ -7,6 +7,7 @@ import { getErrorMessage } from "../utils/helpers";
 const AdminProductEdit = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+
   const [product, setProduct] = useState({
     name: "",
     price: 0,
@@ -17,6 +18,7 @@ const AdminProductEdit = () => {
     category: "",
     countInStock: 0,
   });
+
   const [extraImagesText, setExtraImagesText] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -70,96 +72,191 @@ const AdminProductEdit = () => {
     return <Loader message="Loading product editor..." />;
   }
 
+  const previewImages = [product.image, ...extraImagesText
+    .split("\n")
+    .map((item) => item.trim())
+    .filter(Boolean)];
+
   return (
-    <section className="auth-shell">
-      <form className="card auth-card" onSubmit={submitHandler}>
-        <h1>Edit Product</h1>
+    <section className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-cyan-50 px-6 py-10">
+      <div className="mx-auto max-w-6xl">
+        <div className="mb-8">
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-600">
+            Admin
+          </p>
+          <h1 className="mt-2 text-4xl font-extrabold tracking-tight text-slate-900">
+            Edit Product
+          </h1>
+          <p className="mt-2 text-sm text-slate-600">
+            Update pricing, stock, details, and multiple product images.
+          </p>
+        </div>
 
-        {error && <div className="message message--error">{error}</div>}
+        {error && (
+          <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
+            {error}
+          </div>
+        )}
 
-        <label className="field">
-          <span>Name</span>
-          <input
-            value={product.name}
-            onChange={(e) => setProduct({ ...product, name: e.target.value })}
-            required
-          />
-        </label>
+        <div className="grid gap-8 lg:grid-cols-2">
+          <form
+            className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"
+            onSubmit={submitHandler}
+          >
+            <div className="grid gap-5">
+              <label className="block">
+                <span className="mb-2 block text-sm font-medium text-slate-700">
+                  Name
+                </span>
+                <input
+                  className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200"
+                  value={product.name}
+                  onChange={(e) =>
+                    setProduct({ ...product, name: e.target.value })
+                  }
+                  required
+                />
+              </label>
 
-        <label className="field">
-          <span>Price</span>
-          <input
-            type="number"
-            value={product.price}
-            onChange={(e) => setProduct({ ...product, price: e.target.value })}
-            required
-          />
-        </label>
+              <label className="block">
+                <span className="mb-2 block text-sm font-medium text-slate-700">
+                  Price
+                </span>
+                <input
+                  type="number"
+                  className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200"
+                  value={product.price}
+                  onChange={(e) =>
+                    setProduct({ ...product, price: e.target.value })
+                  }
+                  required
+                />
+              </label>
 
-        <label className="field">
-          <span>Main Image URL</span>
-          <input
-            value={product.image}
-            onChange={(e) => setProduct({ ...product, image: e.target.value })}
-            required
-          />
-        </label>
+              <label className="block">
+                <span className="mb-2 block text-sm font-medium text-slate-700">
+                  Main Image URL
+                </span>
+                <input
+                  className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200"
+                  value={product.image}
+                  onChange={(e) =>
+                    setProduct({ ...product, image: e.target.value })
+                  }
+                  required
+                />
+              </label>
 
-        <label className="field">
-          <span>Extra Image URLs</span>
-          <textarea
-            rows="6"
-            value={extraImagesText}
-            onChange={(e) => setExtraImagesText(e.target.value)}
-            placeholder={"One image URL per line"}
-          />
-        </label>
+              <label className="block">
+                <span className="mb-2 block text-sm font-medium text-slate-700">
+                  Extra Image URLs
+                </span>
+                <textarea
+                  rows="6"
+                  className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200"
+                  value={extraImagesText}
+                  onChange={(e) => setExtraImagesText(e.target.value)}
+                  placeholder="One image URL per line"
+                />
+              </label>
 
-        <label className="field">
-          <span>Brand</span>
-          <input
-            value={product.brand}
-            onChange={(e) => setProduct({ ...product, brand: e.target.value })}
-          />
-        </label>
+              <label className="block">
+                <span className="mb-2 block text-sm font-medium text-slate-700">
+                  Brand
+                </span>
+                <input
+                  className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200"
+                  value={product.brand}
+                  onChange={(e) =>
+                    setProduct({ ...product, brand: e.target.value })
+                  }
+                />
+              </label>
 
-        <label className="field">
-          <span>Category</span>
-          <input
-            value={product.category}
-            onChange={(e) => setProduct({ ...product, category: e.target.value })}
-            required
-          />
-        </label>
+              <label className="block">
+                <span className="mb-2 block text-sm font-medium text-slate-700">
+                  Category
+                </span>
+                <input
+                  className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200"
+                  value={product.category}
+                  onChange={(e) =>
+                    setProduct({ ...product, category: e.target.value })
+                  }
+                  required
+                />
+              </label>
 
-        <label className="field">
-          <span>Stock</span>
-          <input
-            type="number"
-            value={product.countInStock}
-            onChange={(e) =>
-              setProduct({ ...product, countInStock: e.target.value })
-            }
-            required
-          />
-        </label>
+              <label className="block">
+                <span className="mb-2 block text-sm font-medium text-slate-700">
+                  Stock
+                </span>
+                <input
+                  type="number"
+                  className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200"
+                  value={product.countInStock}
+                  onChange={(e) =>
+                    setProduct({ ...product, countInStock: e.target.value })
+                  }
+                  required
+                />
+              </label>
 
-        <label className="field">
-          <span>Description</span>
-          <textarea
-            rows="5"
-            value={product.description}
-            onChange={(e) =>
-              setProduct({ ...product, description: e.target.value })
-            }
-            required
-          />
-        </label>
+              <label className="block">
+                <span className="mb-2 block text-sm font-medium text-slate-700">
+                  Description
+                </span>
+                <textarea
+                  rows="5"
+                  className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200"
+                  value={product.description}
+                  onChange={(e) =>
+                    setProduct({ ...product, description: e.target.value })
+                  }
+                  required
+                />
+              </label>
 
-        <button className="button" type="submit" disabled={saving}>
-          {saving ? "Saving..." : "Update Product"}
-        </button>
-      </form>
+              <button
+                className="rounded-2xl bg-gradient-to-r from-sky-500 to-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-md transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                type="submit"
+                disabled={saving}
+              >
+                {saving ? "Saving..." : "Update Product"}
+              </button>
+            </div>
+          </form>
+
+          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 className="mb-4 text-2xl font-bold text-slate-900">
+              Image Preview
+            </h2>
+
+            {previewImages.filter(Boolean).length > 0 ? (
+              <div className="grid gap-4 sm:grid-cols-2">
+                {previewImages
+                  .filter(Boolean)
+                  .map((img, index) => (
+                    <div
+                      key={`${img}-${index}`}
+                      className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50"
+                    >
+                      <img
+                        src={img}
+                        alt={`Preview ${index + 1}`}
+                        className="h-56 w-full object-cover"
+                      />
+                    </div>
+                  ))}
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-10 text-center text-sm text-slate-500">
+                Add image URLs to preview product images here.
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
     </section>
   );
 };
