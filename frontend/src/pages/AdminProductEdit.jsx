@@ -4,6 +4,14 @@ import Loader from "../components/Loader";
 import API from "../services/api";
 import { getErrorMessage } from "../utils/helpers";
 
+const normalizeExtraImages = (images = []) =>
+  images
+    .flatMap((image) =>
+      typeof image === "string" ? image.split(/[\r\n,]+/) : []
+    )
+    .map((image) => image.trim())
+    .filter(Boolean);
+
 const AdminProductEdit = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -19,7 +27,7 @@ const AdminProductEdit = () => {
     countInStock: 0,
   });
 
-  const [extraImagesText, setExtraImagesText] = useState("");
+  const [extraImages, setExtraImages] = useState([""]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -32,7 +40,7 @@ const AdminProductEdit = () => {
           ...data,
           images: data.images || [],
         });
-        setExtraImagesText((data.images || []).join("\n"));
+        setExtraImages(data.images?.length ? data.images : [""]);
         setError("");
       } catch (error) {
         setError(getErrorMessage(error, "Unable to load product"));
@@ -44,6 +52,28 @@ const AdminProductEdit = () => {
     void fetchProduct();
   }, [id]);
 
+  const updateExtraImage = (index, value) => {
+    setExtraImages((currentImages) =>
+      currentImages.map((image, imageIndex) =>
+        imageIndex === index ? value : image
+      )
+    );
+  };
+
+  const addExtraImageField = () => {
+    setExtraImages((currentImages) => [...currentImages, ""]);
+  };
+
+  const removeExtraImageField = (index) => {
+    setExtraImages((currentImages) => {
+      if (currentImages.length === 1) {
+        return [""];
+      }
+
+      return currentImages.filter((_, imageIndex) => imageIndex !== index);
+    });
+  };
+
   const submitHandler = async (e) => {
     e.preventDefault();
     setSaving(true);
@@ -54,10 +84,7 @@ const AdminProductEdit = () => {
         ...product,
         price: Number(product.price),
         countInStock: Number(product.countInStock),
-        images: extraImagesText
-          .split("\n")
-          .map((item) => item.trim())
-          .filter(Boolean),
+        images: normalizeExtraImages(extraImages),
       });
 
       navigate("/admin/products");
@@ -72,10 +99,9 @@ const AdminProductEdit = () => {
     return <Loader message="Loading product editor..." />;
   }
 
-  const previewImages = [product.image, ...extraImagesText
-    .split("\n")
-    .map((item) => item.trim())
-    .filter(Boolean)];
+  const previewImages = [product.image, ...normalizeExtraImages(extraImages)].filter(
+    Boolean
+  );
 
   return (
     <section className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-cyan-50 px-6 py-10">
@@ -151,13 +177,39 @@ const AdminProductEdit = () => {
                 <span className="mb-2 block text-sm font-medium text-slate-700">
                   Extra Image URLs
                 </span>
-                <textarea
-                  rows="6"
-                  className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200"
-                  value={extraImagesText}
-                  onChange={(e) => setExtraImagesText(e.target.value)}
-                  placeholder="One image URL per line"
-                />
+                <div className="grid gap-3">
+                  {extraImages.map((image, index) => (
+                    <div key={`extra-image-${index}`} className="flex gap-3">
+                      <input
+                        className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200"
+                        value={image}
+                        onChange={(e) => updateExtraImage(index, e.target.value)}
+                        placeholder={`Extra image URL ${index + 1}`}
+                      />
+
+                      <button
+                        className="rounded-2xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-100"
+                        type="button"
+                        onClick={() => removeExtraImageField(index)}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+
+                  <p className="text-xs text-slate-500">
+                    Add one URL per field. You can also paste multiple URLs
+                    separated by commas or new lines.
+                  </p>
+
+                  <button
+                    className="w-fit rounded-2xl border border-sky-200 px-4 py-2 text-sm font-semibold text-sky-600 transition hover:bg-sky-50"
+                    type="button"
+                    onClick={addExtraImageField}
+                  >
+                    Add Another Image
+                  </button>
+                </div>
               </label>
 
               <label className="block">
@@ -232,22 +284,20 @@ const AdminProductEdit = () => {
               Image Preview
             </h2>
 
-            {previewImages.filter(Boolean).length > 0 ? (
+            {previewImages.length > 0 ? (
               <div className="grid gap-4 sm:grid-cols-2">
-                {previewImages
-                  .filter(Boolean)
-                  .map((img, index) => (
-                    <div
-                      key={`${img}-${index}`}
-                      className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50"
-                    >
-                      <img
-                        src={img}
-                        alt={`Preview ${index + 1}`}
-                        className="h-56 w-full object-cover"
-                      />
-                    </div>
-                  ))}
+                {previewImages.map((img, index) => (
+                  <div
+                    key={`${img}-${index}`}
+                    className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50"
+                  >
+                    <img
+                      src={img}
+                      alt={`Preview ${index + 1}`}
+                      className="h-56 w-full object-cover"
+                    />
+                  </div>
+                ))}
               </div>
             ) : (
               <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-10 text-center text-sm text-slate-500">

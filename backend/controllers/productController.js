@@ -2,6 +2,26 @@ const asyncHandler = require("express-async-handler");
 const mongoose = require("mongoose");
 const Product = require("../models/Product");
 
+const normalizeImagesInput = (images) => {
+  if (Array.isArray(images)) {
+    return images
+      .flatMap((image) =>
+        typeof image === "string" ? image.split(/[\r\n,]+/) : []
+      )
+      .map((image) => image.trim())
+      .filter(Boolean);
+  }
+
+  if (typeof images === "string") {
+    return images
+      .split(/[\r\n,]+/)
+      .map((image) => image.trim())
+      .filter(Boolean);
+  }
+
+  return [];
+};
+
 exports.getProducts = asyncHandler(async (req, res) => {
   const pageSize = 5;
   const page = Number(req.query.pageNumber) || 1;
@@ -79,9 +99,7 @@ exports.createProduct = asyncHandler(async (req, res) => {
     throw new Error("Please fill all required fields");
   }
 
-  const normalizedImages = Array.isArray(images)
-    ? images.filter(Boolean)
-    : [];
+  const normalizedImages = normalizeImagesInput(images);
 
   const product = new Product({
     name,
@@ -126,7 +144,11 @@ exports.updateProduct = asyncHandler(async (req, res) => {
   product.price = price ?? product.price;
   product.description = description ?? product.description;
   product.image = image ?? product.image;
-  product.images = Array.isArray(images) ? images.filter(Boolean) : product.images;
+
+  if (Object.prototype.hasOwnProperty.call(req.body, "images")) {
+    product.images = normalizeImagesInput(images);
+  }
+
   product.brand = brand ?? product.brand;
   product.category = category ?? product.category;
   product.countInStock = countInStock ?? product.countInStock;
