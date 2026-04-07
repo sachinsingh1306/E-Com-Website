@@ -1,15 +1,31 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
 import API from "../services/api";
+import { setCredentials } from "../redux/slices/userSlice";
+import { getErrorMessage } from "../utils/helpers";
 
 const Login = () => {
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const { userInfo } = useSelector((state) => state.user);
+  const [searchParams] = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const redirect = searchParams.get("redirect") || "/";
 
-  const navigate = useNavigate();
+  useEffect(() => {
+    if (userInfo) {
+      navigate(redirect, { replace: true });
+    }
+  }, [navigate, redirect, userInfo]);
 
   const submitHandler = async (e) => {
     e.preventDefault();
+    setLoading(true);
+    setError("");
 
     try {
       const { data } = await API.post("/auth/login", {
@@ -17,34 +33,57 @@ const Login = () => {
         password,
       });
 
-      localStorage.setItem("userInfo", JSON.stringify(data));
-
-      navigate("/");
+      dispatch(setCredentials(data));
+      navigate(redirect);
     } catch (error) {
-      alert(error.response?.data?.message || "Invalid credentials");
+      setError(getErrorMessage(error, "Invalid credentials"));
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <form onSubmit={submitHandler}>
-      <h2>Login</h2>
+    <section className="auth-shell">
+      <form className="card auth-card" onSubmit={submitHandler}>
+        <h1>Login</h1>
+        <p className="muted">Access your profile, orders, and admin screens.</p>
 
-      <input
-        type="email"
-        placeholder="Email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-      />
+        {error && <div className="message message--error">{error}</div>}
 
-      <input
-        type="password"
-        placeholder="Password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-      />
+        <label className="field">
+          <span>Email</span>
+          <input
+            type="email"
+            placeholder="you@example.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+        </label>
 
-      <button type="submit">Login</button>
-    </form>
+        <label className="field">
+          <span>Password</span>
+          <input
+            type="password"
+            placeholder="Enter password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+        </label>
+
+        <button className="button" type="submit" disabled={loading}>
+          {loading ? "Signing in..." : "Login"}
+        </button>
+
+        <p className="muted">
+          New here?{" "}
+          <Link to={`/register?redirect=${encodeURIComponent(redirect)}`}>
+            Create an account
+          </Link>
+        </p>
+      </form>
+    </section>
   );
 };
 

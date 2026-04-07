@@ -1,49 +1,90 @@
 import { useEffect, useState } from "react";
+import Loader from "../components/Loader";
 import API from "../services/api";
+import { formatCurrency, getErrorMessage } from "../utils/helpers";
 
 const Profile = () => {
   const [user, setUser] = useState(null);
   const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
+    let ignore = false;
+
     const fetchData = async () => {
       try {
         const { data: userData } = await API.get("/users/profile");
         const { data: orderData } = await API.get("/orders/myorders");
 
-        setUser(userData);
-        setOrders(orderData);
+        if (!ignore) {
+          setUser(userData);
+          setOrders(orderData);
+          setError("");
+        }
       } catch (error) {
-        console.error(error);
+        if (!ignore) {
+          setError(getErrorMessage(error, "Unable to load your profile"));
+        }
+      } finally {
+        if (!ignore) {
+          setLoading(false);
+        }
       }
     };
 
-    fetchData();
+    void fetchData();
+
+    return () => {
+      ignore = true;
+    };
   }, []);
 
-  if (!user) return <h2>Loading...</h2>;
+  if (loading) {
+    return <Loader message="Loading profile..." />;
+  }
+
+  if (error) {
+    return <div className="message message--error">{error}</div>;
+  }
+
+  if (!user) {
+    return <div className="message">Profile not found.</div>;
+  }
 
   return (
-    <div>
-      <h2>Profile</h2>
+    <section className="content-grid">
+      <div className="card card--stack">
+        <h1>Profile</h1>
 
-      <p>Name: {user.name}</p>
-      <p>Email: {user.email}</p>
+        <p>Name: {user.name}</p>
+        <p>Email: {user.email}</p>
+        <p>Status: {user.isAdmin ? "Administrator" : "Customer"}</p>
+      </div>
 
-      <h3>My Orders</h3>
+      <div className="card card--stack">
+        <h2>My Orders</h2>
 
-      {orders.length === 0 ? (
-        <p>No Orders</p>
-      ) : (
-        orders.map((order) => (
-          <div key={order._id}>
-            <p>Order ID: {order._id}</p>
-            <p>Total: ₹{order.totalPrice}</p>
-            <p>Status: {order.isPaid ? "Paid" : "Pending"}</p>
+        {orders.length === 0 ? (
+          <p className="muted">No orders yet.</p>
+        ) : (
+          <div className="stack">
+            {orders.map((order) => (
+              <div key={order._id} className="order-row">
+                <div>
+                  <p className="order-row__id">{order._id}</p>
+                  <p className="muted">
+                    {order.isPaid ? "Paid" : "Pending"} |{" "}
+                    {order.isDelivered ? "Delivered" : "Not delivered"}
+                  </p>
+                </div>
+                <strong>{formatCurrency(order.totalPrice)}</strong>
+              </div>
+            ))}
           </div>
-        ))
-      )}
-    </div>
+        )}
+      </div>
+    </section>
   );
 };
 

@@ -1,38 +1,70 @@
 import { useEffect, useState } from "react";
-import API from "../services/api";
+import Loader from "../components/Loader";
 import ProductCard from "../components/ProductCard";
+import API from "../services/api";
+import { getErrorMessage } from "../utils/helpers";
 
 const Home = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
+    let ignore = false;
+
     const fetchProducts = async () => {
       try {
         const { data } = await API.get("/products");
-        setProducts(data.products); // pagination response
-        setLoading(false);
+
+        if (!ignore) {
+          setProducts(data.products || []);
+          setError("");
+        }
       } catch (error) {
-        console.error(error);
-        setLoading(false);
+        if (!ignore) {
+          setError(getErrorMessage(error, "Unable to load products"));
+        }
+      } finally {
+        if (!ignore) {
+          setLoading(false);
+        }
       }
     };
 
-    fetchProducts();
+    void fetchProducts();
+
+    return () => {
+      ignore = true;
+    };
   }, []);
 
   return (
-    <div>
-      <h2>Products</h2>
+    <section className="page-section">
+      <div className="hero">
+        <div>
+          <p className="eyebrow">Smart shopping flow</p>
+          <h1>Find products, manage orders, and test the full stack faster.</h1>
+          <p className="muted">
+            The storefront and admin screens now share the same cart, auth, and
+            checkout flow.
+          </p>
+        </div>
+      </div>
 
       {loading ? (
-        <h3>Loading...</h3>
+        <Loader message="Loading products..." />
+      ) : error ? (
+        <div className="message message--error">{error}</div>
+      ) : products.length === 0 ? (
+        <div className="message">No products found yet.</div>
       ) : (
-        products.map((product) => (
-          <ProductCard key={product._id} product={product} />
-        ))
+        <div className="product-grid">
+          {products.map((product) => (
+            <ProductCard key={product._id} product={product} />
+          ))}
+        </div>
       )}
-    </div>
+    </section>
   );
 };
 

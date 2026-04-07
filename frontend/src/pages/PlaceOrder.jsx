@@ -1,24 +1,39 @@
-import { useEffect, useState } from "react";
-import API from "../services/api";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import API from "../services/api";
+import Checkout from "./Checkout";
+import { clearCart } from "../redux/slices/cartSlice";
+import {
+  calculateCartTotals,
+  formatCurrency,
+  getErrorMessage,
+} from "../utils/helpers";
 
 const PlaceOrder = () => {
   const navigate = useNavigate();
-
-  const [cartItems, setCartItems] = useState([]);
-  const shippingAddress = JSON.parse(localStorage.getItem("shippingAddress"));
-  const paymentMethod = localStorage.getItem("paymentMethod");
-
-  useEffect(() => {
-    const cart = JSON.parse(localStorage.getItem("cartItems")) || [];
-    setCartItems(cart);
-  }, []);
+  const dispatch = useDispatch();
+  const { cartItems, shippingAddress, paymentMethod } = useSelector(
+    (state) => state.cart
+  );
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const { itemsPrice, taxPrice, shippingPrice, totalPrice } =
+    calculateCartTotals(cartItems);
 
   const placeOrderHandler = async () => {
-    const itemsPrice = cartItems.reduce((acc, item) => acc + item.price * item.qty, 0);
-    const taxPrice = itemsPrice * 0.1;
-    const shippingPrice = itemsPrice > 1000 ? 0 : 50;
-    const totalPrice = itemsPrice + taxPrice + shippingPrice;
+    if (cartItems.length === 0) {
+      setError("Your cart is empty.");
+      return;
+    }
+
+    if (!shippingAddress?.address || !paymentMethod) {
+      navigate("/shipping");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
 
     try {
       const { data } = await API.post("/orders", {
@@ -31,27 +46,80 @@ const PlaceOrder = () => {
         totalPrice,
       });
 
-      // Clear cart
-      localStorage.removeItem("cartItems");
-
+      dispatch(clearCart());
       navigate(`/order/${data._id}`);
     } catch (error) {
-      alert("Order failed");
+      setError(getErrorMessage(error, "Order failed"));
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div>
-      <h2>Place Order</h2>
+    <section className="content-grid">
+      <div className="card card--stack">
+        <Checkout step={4} />
+        <h1>Place Order</h1>
 
-      {cartItems.map((item) => (
-        <div key={item.product}>
-          <p>{item.name} x {item.qty}</p>
+        {error && <div className="message message--error">{error}</div>}
+
+        <div className="stack">
+          <div>
+            <h2>Shipping</h2>
+            <p>
+              {shippingAddress.address}, {shippingAddress.city},{" "}
+              {shippingAddress.postalCode}, {shippingAddress.country}
+            </p>
+          </div>
+
+          <div>
+            <h2>Payment</h2>
+            <p>{paymentMethod}</p>
+          </div>
+
+          <div>
+            <h2>Items</h2>
+            {cartItems.map((item) => (
+              <div key={item.product} className="order-row">
+                <span>
+                  {item.name} x {item.qty}
+                </span>
+                <strong>{formatCurrency(item.price * item.qty)}</strong>
+              </div>
+            ))}
+          </div>
         </div>
-      ))}
+      </div>
 
-      <button onClick={placeOrderHandler}>Place Order</button>
-    </div>
+      <aside className="card card--stack">
+        <h2>Summary</h2>
+        <p className="summary-row">
+          <span>Items</span>
+          <strong>{formatCurrency(itemsPrice)}</strong>
+        </p>
+        <p className="summary-row">
+          <span>Shipping</span>
+          <strong>{formatCurrency(shippingPrice)}</strong>
+        </p>
+        <p className="summary-row">
+          <span>Tax</span>
+          <strong>{formatCurrency(taxPrice)}</strong>
+        </p>
+        <p className="summary-row summary-row--total">
+          <span>Total</span>
+          <strong>{formatCurrency(totalPrice)}</strong>
+        </p>
+
+        <button
+          className="button"
+          type="button"
+          onClick={placeOrderHandler}
+          disabled={loading || cartItems.length === 0}
+        >
+          {loading ? "Placing order..." : "Place Order"}
+        </button>
+      </aside>
+    </section>
   );
 };
 

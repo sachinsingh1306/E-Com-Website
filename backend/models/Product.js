@@ -1,33 +1,19 @@
 const mongoose = require("mongoose");
-
-const reviewSchema = mongoose.Schema(
-  {
-    name: { type: String, required: true },
-    rating: { type: Number, required: true },
-    comment: { type: String, required: true },
-    user: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
-  },
-  { timestamps: true }
-);
+const reviewSchema = require("./Review");
 
 const productSchema = mongoose.Schema(
   {
     name: { type: String, required: true },
     image: { type: String, required: true },
+    images: [{ type: String }],
     brand: String,
     category: String,
     description: String,
     price: { type: Number, required: true, default: 0 },
     countInStock: { type: Number, required: true, default: 0 },
-
-    reviews: [reviewSchema],   // ⭐ Added
+    reviews: [reviewSchema],
     rating: { type: Number, default: 0 },
     numReviews: { type: Number, default: 0 },
-
     user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",

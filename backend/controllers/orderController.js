@@ -1,16 +1,40 @@
+const asyncHandler = require("express-async-handler");
 const Order = require("../models/Order");
 const Product = require("../models/Product");
 
-exports.addOrderItems = async (req, res) => {
-  const { orderItems } = req.body;
+exports.addOrderItems = asyncHandler(async (req, res) => {
+  const {
+    orderItems,
+    shippingAddress,
+    paymentMethod,
+    taxPrice,
+    shippingPrice,
+  } = req.body;
 
-  const items = await Promise.all(
+  if (!orderItems || orderItems.length === 0) {
+    res.status(400);
+    throw new Error("No order items");
+  }
+
+  const normalizedItems = await Promise.all(
     orderItems.map(async (item) => {
       const product = await Product.findById(item.product);
 
+      if (!product) {
+        res.status(404);
+        throw new Error(`Product not found: ${item.product}`);
+      }
+
+      const qty = Number(item.qty) || 1;
+
+      if (product.countInStock < qty) {
+        res.status(400);
+        throw new Error(`${product.name} does not have enough stock`);
+      }
+
       return {
         name: product.name,
-        qty: item.qty,
+        qty,
         image: product.image,
         price: product.price,
         product: product._id,
@@ -18,100 +42,90 @@ exports.addOrderItems = async (req, res) => {
     })
   );
 
-  // continue with order creation...
-};
-
-// @desc Create new order
-exports.addOrderItems = async (req, res) => {
-  const {
-    orderItems,
-    shippingAddress,
-    paymentMethod,
-    itemsPrice,
-    taxPrice,
-    shippingPrice,
-    totalPrice,
-  } = req.body;
-
-  if (orderItems.length === 0) {
-    return res.status(400).json({ message: "No order items" });
-  }
+  const itemsPrice = normalizedItems.reduce(
+    (total, item) => total + item.qty * item.price,
+    0
+  );
+  const safeTaxPrice = Number(taxPrice) || 0;
+  const safeShippingPrice = Number(shippingPrice) || 0;
+  const totalPrice = itemsPrice + safeTaxPrice + safeShippingPrice;
 
   const order = new Order({
     user: req.user._id,
-    orderItems,
+    orderItems: normalizedItems,
     shippingAddress,
     paymentMethod,
     itemsPrice,
-    taxPrice,
-    shippingPrice,
+    taxPrice: safeTaxPrice,
+    shippingPrice: safeShippingPrice,
     totalPrice,
   });
 
   const createdOrder = await order.save();
   res.status(201).json(createdOrder);
-};
+});
 
-// @desc Get logged-in user orders
-exports.getMyOrders = async (req, res) => {
-  const orders = await Order.find({ user: req.user._id });
+exports.getMyOrders = asyncHandler(async (req, res) => {
+  const orders = await Order.find({ user: req.user._id }).sort({ createdAt: -1 });
   res.json(orders);
-};
+});
 
-// @desc Get order by ID
-exports.getOrderById = async (req, res) => {
-  const order = await Order.findById(req.params.id).populate(
-    "user",
-    "name email"
-  );
+exports.getOrderById = asyncHandler(async (req, res) => {
+  const order = await Order.findById(req.params.id).populate("user", "name email");
 
-  if (order) {
-    res.json(order);
-  } else {
-    res.status(404).json({ message: "Order not found" });
+  if (!order) {
+    res.status(404);
+    throw new Error("Order not found");
   }
-};
 
-// @desc Update order to paid
-exports.updateOrderToPaid = async (req, res) => {
+  res.json(order);
+});
+
+exports.updateOrderToPaid = asyncHandler(async (req, res) => {
   const order = await Order.findById(req.params.id);
 
-  if (order) {
-    order.isPaid = true;
-    order.paidAt = Date.now();
-
-    order.paymentResult = {
-      id: req.body.id,
-      status: req.body.status,
-      update_time: req.body.update_time,
-      email_address: req.body.email_address,
-    };
-
-    const updatedOrder = await order.save();
-    res.json(updatedOrder);
-  } else {
-    res.status(404).json({ message: "Order not found" });
+  if (!order) {
+    res.status(404);
+    throw new Error("Order not found");
   }
-};
 
-// @desc Update order to delivered (Admin)
-exports.updateOrderToDelivered = async (req, res) => {
+  order.isPaid = true;
+  order.paidAt = Date.now();
+  order.paymentResult = {
+    id: req.body.id,
+    status: req.body.status,
+    update_time: req.body.update_time,
+    email_address: req.body.email_address,
+  };
+
+  const updatedOrder = await order.save();
+  res.json(updatedOrder);
+});
+
+exports.updateOrderToDelivered = asyncHandler(async (req, res) => {
   const order = await Order.findById(req.params.id);
 
-  if (order) {
-    order.isDelivered = true;
-    order.deliveredAt = Date.now();
-
-    const updatedOrder = await order.save();
-    res.json(updatedOrder);
-  } else {
-    res.status(404).json({ message: "Order not found" });
+  if (!order) {
+    res.status(404);
+    throw new Error("Order not found");
   }
-};
 
-// @desc Get all orders (Admin)
-// @route GET /api/orders
-exports.getOrders = async (req, res) => {
-  const orders = await Order.find({}).populate("user", "id name");
+  const trackingNumber = (req.body.trackingNumber || "").trim();
+
+  if (!trackingNumber) {
+    res.status(400);
+    throw new Error("Tracking number is required");
+  }
+
+  order.isDelivered = true;
+  order.deliveredAt = Date.now();
+  order.trackingNumber = trackingNumber;
+
+  const updatedOrder = await order.save();
+  res.json(updatedOrder);
+});
+
+exports.getOrders = asyncHandler(async (req, res) => {
+  const orders = await Order.find({}).populate("user", "id name email");
   res.json(orders);
-};
+});

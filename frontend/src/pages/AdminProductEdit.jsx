@@ -1,91 +1,166 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
+import Loader from "../components/Loader";
 import API from "../services/api";
+import { getErrorMessage } from "../utils/helpers";
 
 const AdminProductEdit = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-
   const [product, setProduct] = useState({
     name: "",
     price: 0,
     description: "",
     image: "",
+    images: [],
     brand: "",
     category: "",
     countInStock: 0,
   });
+  const [extraImagesText, setExtraImagesText] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     const fetchProduct = async () => {
-      const { data } = await API.get(`/products/${id}`);
-      setProduct(data);
+      try {
+        const { data } = await API.get(`/products/${id}`);
+        setProduct({
+          ...data,
+          images: data.images || [],
+        });
+        setExtraImagesText((data.images || []).join("\n"));
+        setError("");
+      } catch (error) {
+        setError(getErrorMessage(error, "Unable to load product"));
+      } finally {
+        setLoading(false);
+      }
     };
 
-    fetchProduct();
+    void fetchProduct();
   }, [id]);
 
   const submitHandler = async (e) => {
     e.preventDefault();
+    setSaving(true);
+    setError("");
 
-    await API.put(`/products/${id}`, product);
+    try {
+      await API.put(`/products/${id}`, {
+        ...product,
+        price: Number(product.price),
+        countInStock: Number(product.countInStock),
+        images: extraImagesText
+          .split("\n")
+          .map((item) => item.trim())
+          .filter(Boolean),
+      });
 
-    alert("Product Updated");
-    navigate("/admin/products");
+      navigate("/admin/products");
+    } catch (error) {
+      setError(getErrorMessage(error, "Unable to update product"));
+    } finally {
+      setSaving(false);
+    }
   };
 
+  if (loading) {
+    return <Loader message="Loading product editor..." />;
+  }
+
   return (
-    <form onSubmit={submitHandler}>
-      <h2>Edit Product</h2>
+    <section className="auth-shell">
+      <form className="card auth-card" onSubmit={submitHandler}>
+        <h1>Edit Product</h1>
 
-      <input
-        value={product.name}
-        onChange={(e) => setProduct({ ...product, name: e.target.value })}
-        placeholder="Name"
-      />
+        {error && <div className="message message--error">{error}</div>}
 
-      <input
-        value={product.price}
-        onChange={(e) => setProduct({ ...product, price: e.target.value })}
-        placeholder="Price"
-      />
+        <label className="field">
+          <span>Name</span>
+          <input
+            value={product.name}
+            onChange={(e) => setProduct({ ...product, name: e.target.value })}
+            required
+          />
+        </label>
 
-      <input
-        value={product.image}
-        onChange={(e) => setProduct({ ...product, image: e.target.value })}
-        placeholder="Image URL"
-      />
+        <label className="field">
+          <span>Price</span>
+          <input
+            type="number"
+            value={product.price}
+            onChange={(e) => setProduct({ ...product, price: e.target.value })}
+            required
+          />
+        </label>
 
-      <input
-        value={product.brand}
-        onChange={(e) => setProduct({ ...product, brand: e.target.value })}
-        placeholder="Brand"
-      />
+        <label className="field">
+          <span>Main Image URL</span>
+          <input
+            value={product.image}
+            onChange={(e) => setProduct({ ...product, image: e.target.value })}
+            required
+          />
+        </label>
 
-      <input
-        value={product.category}
-        onChange={(e) => setProduct({ ...product, category: e.target.value })}
-        placeholder="Category"
-      />
+        <label className="field">
+          <span>Extra Image URLs</span>
+          <textarea
+            rows="6"
+            value={extraImagesText}
+            onChange={(e) => setExtraImagesText(e.target.value)}
+            placeholder={"One image URL per line"}
+          />
+        </label>
 
-      <input
-        value={product.countInStock}
-        onChange={(e) =>
-          setProduct({ ...product, countInStock: e.target.value })
-        }
-        placeholder="Stock"
-      />
+        <label className="field">
+          <span>Brand</span>
+          <input
+            value={product.brand}
+            onChange={(e) => setProduct({ ...product, brand: e.target.value })}
+          />
+        </label>
 
-      <textarea
-        value={product.description}
-        onChange={(e) =>
-          setProduct({ ...product, description: e.target.value })
-        }
-        placeholder="Description"
-      />
+        <label className="field">
+          <span>Category</span>
+          <input
+            value={product.category}
+            onChange={(e) => setProduct({ ...product, category: e.target.value })}
+            required
+          />
+        </label>
 
-      <button type="submit">Update</button>
-    </form>
+        <label className="field">
+          <span>Stock</span>
+          <input
+            type="number"
+            value={product.countInStock}
+            onChange={(e) =>
+              setProduct({ ...product, countInStock: e.target.value })
+            }
+            required
+          />
+        </label>
+
+        <label className="field">
+          <span>Description</span>
+          <textarea
+            rows="5"
+            value={product.description}
+            onChange={(e) =>
+              setProduct({ ...product, description: e.target.value })
+            }
+            required
+          />
+        </label>
+
+        <button className="button" type="submit" disabled={saving}>
+          {saving ? "Saving..." : "Update Product"}
+        </button>
+      </form>
+    </section>
   );
 };
 

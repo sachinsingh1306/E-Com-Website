@@ -35,6 +35,10 @@ const orderSchema = mongoose.Schema(
       update_time: String,
       email_address: String,
     },
+    trackingNumber: {
+      type: String,
+      default: "",
+    },
     itemsPrice: Number,
     taxPrice: Number,
     shippingPrice: Number,
@@ -50,7 +54,7 @@ const orderSchema = mongoose.Schema(
     },
     deliveredAt: Date,
   },
-  { timestamps: true },
+  { timestamps: true }
 );
 
 module.exports = mongoose.model("Order", orderSchema);

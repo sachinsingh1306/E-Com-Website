@@ -1,12 +1,12 @@
 import axios from "axios";
+import { readStoredJson } from "../utils/helpers";
 
 const API = axios.create({
-  baseURL: "http://localhost:5000/api",
+  baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api",
 });
 
-// Attach token automatically
 API.interceptors.request.use((config) => {
-  const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+  const userInfo = readStoredJson("userInfo", null);
 
   if (userInfo?.token) {
     config.headers.Authorization = `Bearer ${userInfo.token}`;

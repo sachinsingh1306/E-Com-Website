@@ -1,16 +1,32 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
 import API from "../services/api";
+import { setCredentials } from "../redux/slices/userSlice";
+import { getErrorMessage } from "../utils/helpers";
 
 const Register = () => {
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const { userInfo } = useSelector((state) => state.user);
+  const [searchParams] = useSearchParams();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const redirect = searchParams.get("redirect") || "/";
 
-  const navigate = useNavigate();
+  useEffect(() => {
+    if (userInfo) {
+      navigate(redirect, { replace: true });
+    }
+  }, [navigate, redirect, userInfo]);
 
   const submitHandler = async (e) => {
     e.preventDefault();
+    setLoading(true);
+    setError("");
 
     try {
       const { data } = await API.post("/auth/register", {
@@ -19,42 +35,68 @@ const Register = () => {
         password,
       });
 
-      // Save user in localStorage
-      localStorage.setItem("userInfo", JSON.stringify(data));
-
-      navigate("/");
+      dispatch(setCredentials(data));
+      navigate(redirect);
     } catch (error) {
-      alert(error.response?.data?.message || "Error");
+      setError(getErrorMessage(error, "Unable to register"));
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <form onSubmit={submitHandler}>
-      <h2>Register</h2>
+    <section className="auth-shell">
+      <form className="card auth-card" onSubmit={submitHandler}>
+        <h1>Create Account</h1>
+        <p className="muted">
+          Set up a shopper account or an admin account from your seeded data.
+        </p>
 
-      <input
-        type="text"
-        placeholder="Name"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-      />
+        {error && <div className="message message--error">{error}</div>}
 
-      <input
-        type="email"
-        placeholder="Email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-      />
+        <label className="field">
+          <span>Name</span>
+          <input
+            type="text"
+            placeholder="Your name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+          />
+        </label>
 
-      <input
-        type="password"
-        placeholder="Password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-      />
+        <label className="field">
+          <span>Email</span>
+          <input
+            type="email"
+            placeholder="you@example.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+        </label>
 
-      <button type="submit">Register</button>
-    </form>
+        <label className="field">
+          <span>Password</span>
+          <input
+            type="password"
+            placeholder="Choose a password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+        </label>
+
+        <button className="button" type="submit" disabled={loading}>
+          {loading ? "Creating..." : "Register"}
+        </button>
+
+        <p className="muted">
+          Already registered?{" "}
+          <Link to={`/login?redirect=${encodeURIComponent(redirect)}`}>Login</Link>
+        </p>
+      </form>
+    </section>
   );
 };
 
